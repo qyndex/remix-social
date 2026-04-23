@@ -9,7 +9,26 @@ export default [
   js.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
-    languageOptions: { parser: tsParser, parserOptions: { ecmaFeatures: { jsx: true } } },
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: {
+        // Node.js globals (server-side Remix code)
+        process: "readonly",
+        console: "readonly",
+        crypto: "readonly",
+        // Web API globals (available in Node 18+ and Remix)
+        Request: "readonly",
+        Response: "readonly",
+        Headers: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        FormData: "readonly",
+        fetch: "readonly",
+        // React
+        React: "readonly",
+      },
+    },
     plugins: {
       "@typescript-eslint": tsPlugin,
       react: reactPlugin,

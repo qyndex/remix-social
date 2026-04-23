@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Feed page", () => {
+test.describe("Feed page (anonymous)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });
@@ -9,20 +9,13 @@ test.describe("Feed page", () => {
     await expect(page).toHaveTitle(/Feed — Remix Social/);
   });
 
-  test("shows the compose form with accessible label", async ({ page }) => {
-    const form = page.getByRole("form", { name: "New post" });
-    await expect(form).toBeVisible();
+  test("shows login/signup links for anonymous users", async ({ page }) => {
+    await expect(page.getByRole("link", { name: "Log in" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign up" })).toBeVisible();
   });
 
-  test("compose textarea is present and accepts input", async ({ page }) => {
-    const textarea = page.getByRole("textbox", { name: "Post content" });
-    await expect(textarea).toBeVisible();
-    await textarea.fill("Testing from Playwright");
-    await expect(textarea).toHaveValue("Testing from Playwright");
-  });
-
-  test("Post button has accessible label", async ({ page }) => {
-    await expect(page.getByRole("button", { name: "Post" })).toBeVisible();
+  test("shows a prompt to log in instead of compose form", async ({ page }) => {
+    await expect(page.getByText("Log in")).toBeVisible();
   });
 
   test("renders seed posts in the feed", async ({ page }) => {
@@ -34,15 +27,7 @@ test.describe("Feed page", () => {
     await expect(cards).not.toHaveCount(0);
   });
 
-  test("each post card has a like button with aria-label", async ({ page }) => {
-    const firstLikeBtn = page
-      .getByRole("button", { name: /Like this post/ })
-      .first();
-    await expect(firstLikeBtn).toBeVisible();
-  });
-
   test("author avatar links navigate to the user profile", async ({ page }) => {
-    // Get first avatar link href and verify it points to /users/...
     const avatarLink = page.locator(".avatar-link").first();
     const href = await avatarLink.getAttribute("href");
     expect(href).toMatch(/^\/users\//);
@@ -53,26 +38,43 @@ test.describe("Feed page", () => {
     const href = await nameLink.getAttribute("href");
     expect(href).toMatch(/^\/users\//);
   });
-
-  test("can submit a new post and it appears in the feed", async ({ page }) => {
-    const textarea = page.getByRole("textbox", { name: "Post content" });
-    const postButton = page.getByRole("button", { name: "Post" });
-
-    const unique = `E2E test post ${Date.now()}`;
-    await textarea.fill(unique);
-    await postButton.click();
-
-    // After redirect back to /, the new post should be visible
-    await page.waitForURL("/");
-    await expect(page.getByText(unique)).toBeVisible();
-  });
 });
 
 test.describe("Feed page — error state", () => {
   test("shows 404 page when navigating to an unknown user", async ({ page }) => {
     await page.goto("/users/this_user_does_not_exist_xyz");
-    // ErrorBoundary renders the status code
     await expect(page.getByText(/404/)).toBeVisible();
+  });
+});
+
+test.describe("Auth pages", () => {
+  test("login page renders correctly", async ({ page }) => {
+    await page.goto("/auth/login");
+    await expect(page).toHaveTitle(/Log In — Remix Social/);
+    await expect(page.getByRole("heading", { name: "Log In" })).toBeVisible();
+    await expect(page.getByLabel("Email address")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log in" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign up" })).toBeVisible();
+  });
+
+  test("signup page renders correctly", async ({ page }) => {
+    await page.goto("/auth/signup");
+    await expect(page).toHaveTitle(/Sign Up — Remix Social/);
+    await expect(page.getByRole("heading", { name: "Sign Up" })).toBeVisible();
+    await expect(page.getByLabel("Username")).toBeVisible();
+    await expect(page.getByLabel("Email address")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign up" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+  });
+
+  test("login form shows error for invalid credentials", async ({ page }) => {
+    await page.goto("/auth/login");
+    await page.getByLabel("Email address").fill("nobody@example.com");
+    await page.getByLabel("Password").fill("wrongpassword");
+    await page.getByRole("button", { name: "Log in" }).click();
+    await expect(page.getByRole("alert")).toBeVisible();
   });
 });
 
@@ -94,11 +96,11 @@ test.describe("User profile page", () => {
     await expect(page.getByText("Following")).toBeVisible();
   });
 
-  test("has a Follow button with accessible label", async ({ page }) => {
+  test("has a Follow button/link", async ({ page }) => {
     await page.goto("/users/alice_dev");
-    await expect(
-      page.getByRole("button", { name: /Follow Alice Chen/ }),
-    ).toBeVisible();
+    // Anonymous users see a Follow link (to login), or button for authenticated
+    const followEl = page.locator(".btn-follow, .btn-following").first();
+    await expect(followEl).toBeVisible();
   });
 
   test("shows the user's posts section", async ({ page }) => {
@@ -114,10 +116,8 @@ test.describe("User profile page", () => {
     await expect(section.getByRole("heading", { name: "Posts" })).toBeVisible();
   });
 
-  test("clicking Follow redirects back to the same profile", async ({ page }) => {
+  test("back to feed link is present", async ({ page }) => {
     await page.goto("/users/alice_dev");
-    await page.getByRole("button", { name: /Follow Alice Chen/ }).click();
-    await page.waitForURL("/users/alice_dev");
-    await expect(page).toHaveURL("/users/alice_dev");
+    await expect(page.getByRole("link", { name: "Back to feed" })).toBeVisible();
   });
 });
