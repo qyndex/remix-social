@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from "@supabase/ssr";
 
-const supabaseUrl = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? "";
+const supabaseUrl = process.env.SUPABASE_URL || "http://localhost:54321";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "placeholder";
 
 /**
  * Admin client for server-side operations that bypass RLS (seed, triggers, etc.).
